@@ -50,9 +50,16 @@ app.blueprint(openapi_blueprint)
 app.blueprint(swagger_blueprint)
 
 @app.route("/")
-@doc.description("Get all the Theme elements")
+@doc.description("get api system information")
 async def test(request):
-  return response.json({"hello": "world"})
+	return response.json({
+			"api-type":"video-broker",
+			"api-version": app.config['API_VERSION'],
+			"title": app.config['API_TITLE'],
+			"description": app.config['API_DESCRIPTION'],
+			"contact": app.config['API_CONTACT_EMAIL'],
+			"licence": app.config['API_LICENSE_NAME']
+		})
 
 
 def add_interface(_name):
@@ -66,44 +73,6 @@ API_SAISON = "saison"
 add_interface(API_SAISON)
 API_VIDEO = "video"
 add_interface(API_VIDEO)
-
-"""
-class ThemeListView(views.HTTPMethodView):
-	def __init__(self):
-		self.name = API_THEME
-	@doc.description("Get all the Theme elements")
-	async def get(self, request):
-		return response.json(data_global_elements.get_interface(self.name).gets())
-	async def post(self, request):
-		return response.json(data_global_elements.get_interface(self.name).post(request.json))
-
-class ThemeView(views.HTTPMethodView):
-	def __init__(self):
-		self.name = API_THEME
-	async def get(self, request, id):
-		value = data_global_elements.get_interface(self.name).get(id)
-		if value != None:
-			return response.json(value)
-		raise ServerError("No data found", status_code=404)
-	async def put(self, request, id):
-		ret = data_global_elements.get_interface(self.name).put(id)
-		return response.json({})
-	" ""
-	async def patch(self, request, id):
-		return response.text('I am patch method')
-	"" "
-	async def delete(self, request, id):
-		return response.text('I am delete method')
-		ret = data_global_elements.get_interface(self.name).delete(id)
-		if ret == True:
-			return response.json({})
-		raise ServerError("No data found", status_code=404)
-
-theme_blueprint = Blueprint(API_THEME)
-theme_blueprint.add_route(ThemeListView.as_view(), '/' + API_THEME + '/', strict_slashes=True)
-theme_blueprint.add_route(ThemeView.as_view(), '/' + API_THEME + '/<id:int>', strict_slashes=True)
-app.blueprint(theme_blueprint)
-"""
 
 def add_theme(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
@@ -326,155 +295,10 @@ def add_video(_app, _name_api):
 
 add_video(app, API_VIDEO)
 
-"""
-def add_group(_group_name):
-	@app.route("/qsdqd")
-	@doc.description("Get all the Theme " + _group_name)
-	@doc.consumes({'name': str}, location='query', description='Student name', example={'name': 'john'})
-	async def test(request):
-		return response.json({"hello": "world"})
-		
-
-add_group("sqdfqsdfqsfgqsdf")
-"""
-def add_student(_app):
-	student_blueprint = Blueprint("student")
-	
-	class Student:
-	    name = str
-	    address = str
-	
-	@student_blueprint.get('/student', strict_slashes=True)
-	@doc.summary("Show resources")
-	@doc.description("Display a listing of the resource.")
-	@doc.deprecated(True) #if the api is deprecated
-	@doc.produces(content_type='application/json')
-	@doc.consumes({'name': str}, location='query', description='Student name', example={'name': 'john'})
-	async def index(request):
-	    pass
-	
-	@student_blueprint.post('/student', strict_slashes=True)
-	@doc.summary("Create new resource")
-	@doc.description("Store a newly created resource in storage.")
-	@doc.consumes(Student, location='body', required=True)
-	@doc.response_success(status=201, description='If successful created')
-	async def store(request):
-	    pass
-	
-	@student_blueprint.put('/student/<id:int>', strict_slashes=True)
-	@doc.summary("Update resource")
-	@doc.description("Update the specified resource in storage.")
-	@doc.response_success(status=201, description='If successful updated')
-	async def update(request, id):
-	    pass
-	
-	@student_blueprint.delete('/student/<id:int>', strict_slashes=True)
-	@doc.summary("Remove resource")
-	@doc.description("Remove the specified resource from storage.")
-	@doc.response_success(status=201, description='If successful deleted')
-	async def delete(request, id):
-	    pass
-	
-	_app.blueprint(student_blueprint)
-
-add_student(app)
-
-"""
-LIST_themes = [
-	{
-		'id': 0,
-		'name': 'Documentary',
-		'description': 'Documentary (annimals, space, earth...)',
-	},{
-		'id': 1,
-		'name': 'Movie',
-		'description': 'Movie with real humans (film)',
-	},{
-		'id': 2,
-		'name': 'Annimation',
-		'description': 'Annimation movies (film)',
-	},{
-		'id': 3,
-		'name': 'Short Films',
-		'description': 'Small movies (less 2 minutes)',
-	},{
-		'id': 4,
-		'name': 'tv show',
-		'description': 'Tv show form old peoples',
-	}, {
-		'id': 5,
-		'name': 'Anniation tv show',
-		'description': 'Tv show form young peoples',
-	},
-]
-
-
-class ThemeList(Resource):
-	# example use:	curl http://127.0.0.1:15080/api/v1/theme
-	def get(self):
-		debug.info("Request temes: " + str(time))
-		return LIST_themes, 200
-
-class Theme(Resource):
-	# example use:	curl http://127.0.0.1:15080/api/v1/theme/xxx
-	def get(self, id):
-		debug.info("Request theme: " + str(id))
-		for elem in LIST_themes:
-			if     'id' in elem.keys() \
-			   and elem["id"] == id:
-				return elem, 200
-		return "No data found in list of element: " + str(len(LIST_themes)), 404
-"""
-"""
-class ThemeList(Resource):
-	def __init__(self):
-		self.name = API_THEME
-	
-	# example use:	curl http://127.0.0.1:15080/api/v1/theme
-	def get(self):
-		return data_global_elements.get_interface(self.name).gets(), 200
-	
-	" ""
-	def post(self):
-		args = parser.parse_args()
-		todo_id = int(max(TODOS.keys()).lstrip('todo')) + 1
-		todo_id = 'todo%i' % todo_id
-		TODOS[todo_id] = {'task': args['task']}
-		return TODOS[todo_id], 201
-	"" "
-
-class Theme(Resource):
-	def __init__(self):
-		self.name = API_THEME
-		
-	# example use:	curl http://127.0.0.1:15080/api/v1/theme/xxx
-	def get(self, id):
-		value = data_global_elements.get_interface(self.name).get(id)
-		if value != None:
-			return value, 200
-		return "No data found", 404
-	
-	def delete(self, id):
-		ret = data_global_elements.get_interface(self.name).delete(id)
-		if ret == True:
-			return '', 204
-		return "No data found", 404
-	"" "
-	def put(self, id):
-		ret = data_global_elements.get_interface(self.name).put(id)
-		return task, 201
-	" ""
-
-api.add_resource(ThemeList, "/api/v1/" + API_THEME)
-api.add_resource(Theme, "/api/v1/" + API_THEME + "/<int:id>")
-"""
-
-
 
 if __name__ == "__main__":
 	rest_config = config.get_rest_config()
 	debug.info("Start REST application: " + str(rest_config["host"]) + ":" + str(rest_config["port"]))
 	app.run(host=rest_config["host"], port=int(rest_config["port"]))
 	debug.info("END program");
-	
 	
