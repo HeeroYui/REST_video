@@ -2,9 +2,9 @@ FROM python:alpine
 
 RUN pip install --upgrade pip
 
-RUN pip install flask
+RUN pip install sanic
 
-RUN pip install flask_restful
+RUN pip install sanic-simple-swagger
 
 RUN pip install python-dateutil
 
