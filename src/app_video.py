@@ -65,8 +65,8 @@ async def test(request):
 def add_interface(_name):
 	data_global_elements.add_interface(_name, data_interface.DataInterface(_name, os.path.join(tools.get_run_path(), "data", "bdd_" + _name + ".json")))
 
-API_THEME = "theme"
-add_interface(API_THEME)
+API_TYPE = "type"
+add_interface(API_TYPE)
 API_GROUP = "group"
 add_interface(API_GROUP)
 API_SAISON = "saison"
@@ -74,7 +74,7 @@ add_interface(API_SAISON)
 API_VIDEO = "video"
 add_interface(API_VIDEO)
 
-def add_theme(_app, _name_api):
+def add_type(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
 	
 	class DataModel:
@@ -126,7 +126,7 @@ def add_theme(_app, _name_api):
 	
 	_app.blueprint(elem_blueprint)
 
-add_theme(app, API_THEME)
+add_type(app, API_TYPE)
 
 def add_group(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
@@ -239,6 +239,7 @@ def add_video(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
 	
 	class DataModel:
+		type_id = int
 		saison_id = int
 		group_id = int
 		name = str
@@ -295,10 +296,33 @@ def add_video(_app, _name_api):
 
 add_video(app, API_VIDEO)
 
+tmp_value = 0
+
+#curl  -F 'file=@Totally_Spies.mp4;type=application/octet-stream' -H 'transfer-encoding:chunked' 127.0.0.1:15080/data -X POST -O; echo ;
+
+@app.post('/data', stream=True)
+async def handler(_request):
+    debug.info("request streaming " + str(_request));
+    async def streaming(_response):
+        debug.info("streaming " + str(_response));
+        total_size = 0
+        while True:
+            body = await _request.stream.read()
+            if body is None:
+                debug.warning("empty body");
+                break
+            total_size += len(body)
+            debug.warning("body " + str(len(body)) + "/" + str(total_size))
+            #body = body.decode('utf-8').replace('1', 'A')
+            #await _response.write('{"size":' + len(body) + '}')
+            #await _response.write("0")#str(len(body)))
+    return response.stream(streaming)
 
 if __name__ == "__main__":
 	rest_config = config.get_rest_config()
 	debug.info("Start REST application: " + str(rest_config["host"]) + ":" + str(rest_config["port"]))
 	app.run(host=rest_config["host"], port=int(rest_config["port"]))
 	debug.info("END program");
-	
+	sys.exit(0)
+
+
