@@ -34,6 +34,7 @@ import tools
 import data_interface
 import data_global_elements
 
+rest_config = config.get_rest_config()
 
 app = Sanic("REST_video")
 
@@ -296,31 +297,45 @@ def add_video(_app, _name_api):
 
 add_video(app, API_VIDEO)
 
+import hashlib
+import shutil
+
+
 tmp_value = 0
 
 #curl  -F 'file=@Totally_Spies.mp4;type=application/octet-stream' -H 'transfer-encoding:chunked' 127.0.0.1:15080/data -X POST -O; echo ;
 
 @app.post('/data', stream=True)
 async def handler(_request):
-    debug.info("request streaming " + str(_request));
-    async def streaming(_response):
-        debug.info("streaming " + str(_response));
-        total_size = 0
-        while True:
-            body = await _request.stream.read()
-            if body is None:
-                debug.warning("empty body");
-                break
-            total_size += len(body)
-            debug.warning("body " + str(len(body)) + "/" + str(total_size))
-            #body = body.decode('utf-8').replace('1', 'A')
-            #await _response.write('{"size":' + len(body) + '}')
-            #await _response.write("0")#str(len(body)))
-    return response.stream(streaming)
+	debug.info("request streaming " + str(_request));
+	async def streaming(_response):
+		debug.info("streaming " + str(_response));
+		total_size = 0
+		temporary_file = os.path.join(rest_config["tmp_data"], str(tmp_value) + ".tmp")
+		if not os.path.exists(rest_config["tmp_data"]):
+			os.makedirs(rest_config["tmp_data"])
+		if not os.path.exists(rest_config["data_media"]):
+			os.makedirs(rest_config["data_media"])
+		file_stream = open(temporary_file,"wb")
+		sha1 = hashlib.sha512()
+		while True:
+			body = await _request.stream.read()
+			if body is None:
+				debug.warning("empty body");
+				break
+			total_size += len(body)
+			debug.warning("body " + str(len(body)) + "/" + str(total_size))
+			file_stream.write(body)
+			sha1.update(body)
+		file_stream.close()
+		print("SHA512: " + str(sha1.hexdigest()))
+		await _response.write('{"size":' + str(total_size) + ', "sha512":"' + str(sha1.hexdigest()) + '"}')
+		shutil.move(temporary_file, os.path.join(rest_config["data_media"], str(sha1.hexdigest())))
+	return response.stream(streaming, content_type='application/json')
 
 if __name__ == "__main__":
-	rest_config = config.get_rest_config()
 	debug.info("Start REST application: " + str(rest_config["host"]) + ":" + str(rest_config["port"]))
+	app.config.REQUEST_MAX_SIZE=10*1024*1024*1024
 	app.run(host=rest_config["host"], port=int(rest_config["port"]))
 	debug.info("END program");
 	sys.exit(0)
