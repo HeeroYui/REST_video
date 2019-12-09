@@ -23,6 +23,7 @@ import dateutil.parser
 
 
 import time
+import json
 import os
 import sys
 import datetime
@@ -74,6 +75,7 @@ API_SAISON = "saison"
 add_interface(API_SAISON)
 API_VIDEO = "video"
 add_interface(API_VIDEO)
+API_DATA = "data"
 
 def add_type(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
@@ -241,7 +243,8 @@ def add_video(_app, _name_api):
 	
 	class DataModel:
 		type_id = int
-		saison_id = int
+		saison = int
+		episode = int
 		group_id = int
 		name = str
 		description = str
@@ -297,41 +300,98 @@ def add_video(_app, _name_api):
 
 add_video(app, API_VIDEO)
 
-import hashlib
-import shutil
-
-
 tmp_value = 0
 
 #curl  -F 'file=@Totally_Spies.mp4;type=application/octet-stream' -H 'transfer-encoding:chunked' 127.0.0.1:15080/data -X POST -O; echo ;
 
-@app.post('/data', stream=True)
-async def handler(_request):
-	debug.info("request streaming " + str(_request));
-	async def streaming(_response):
-		debug.info("streaming " + str(_response));
-		total_size = 0
-		temporary_file = os.path.join(rest_config["tmp_data"], str(tmp_value) + ".tmp")
-		if not os.path.exists(rest_config["tmp_data"]):
-			os.makedirs(rest_config["tmp_data"])
-		if not os.path.exists(rest_config["data_media"]):
-			os.makedirs(rest_config["data_media"])
-		file_stream = open(temporary_file,"wb")
-		sha1 = hashlib.sha512()
-		while True:
-			body = await _request.stream.read()
-			if body is None:
-				debug.warning("empty body");
-				break
-			total_size += len(body)
-			debug.warning("body " + str(len(body)) + "/" + str(total_size))
-			file_stream.write(body)
-			sha1.update(body)
-		file_stream.close()
-		print("SHA512: " + str(sha1.hexdigest()))
-		await _response.write('{"size":' + str(total_size) + ', "sha512":"' + str(sha1.hexdigest()) + '"}')
-		shutil.move(temporary_file, os.path.join(rest_config["data_media"], str(sha1.hexdigest())))
-	return response.stream(streaming, content_type='application/json')
+def add_data(_app, _name_api):
+	elem_blueprint = Blueprint(_name_api)
+	"""
+	@elem_blueprint.get('/' + _name_api, strict_slashes=True)
+	@doc.summary("Show saisons")
+	@doc.description("Display a listing of the resource.")
+	@doc.produces(content_type='application/json')
+	async def list(request):
+		return response.json(data_global_elements.get_interface(_name_api).gets())
+	"""
+	
+	@elem_blueprint.post('/' + _name_api, strict_slashes=True, stream=True)
+	@doc.summary("send new file data")
+	@doc.description("Create a new data file (associated with his sha512.")
+	#@doc.consumes(DataModel, location='body')#, required=True)
+	@doc.response_success(status=201, description='If successful created')
+	async def create(_request):
+		debug.info("request streaming " + str(_request));
+		args_with_blank_values = _request.headers
+		debug.info("List arguments: " + str(args_with_blank_values));
+		async def streaming(_response):
+			debug.info("streaming " + str(_response));
+			total_size = 0
+			temporary_file = os.path.join(rest_config["tmp_data"], str(tmp_value) + ".tmp")
+			if not os.path.exists(rest_config["tmp_data"]):
+				os.makedirs(rest_config["tmp_data"])
+			if not os.path.exists(rest_config["data_media"]):
+				os.makedirs(rest_config["data_media"])
+			file_stream = open(temporary_file,"wb")
+			sha1 = hashlib.sha512()
+			while True:
+				body = await _request.stream.read()
+				if body is None:
+					debug.warning("empty body");
+					break
+				total_size += len(body)
+				debug.verbose("body " + str(len(body)) + "/" + str(total_size))
+				file_stream.write(body)
+				sha1.update(body)
+			file_stream.close()
+			print("SHA512: " + str(sha1.hexdigest()))
+			destination_filename = os.path.join(rest_config["data_media"], str(sha1.hexdigest()))
+			if os.path.isfile(destination_filename) == True:
+				answer_data = {
+					"size": total_size,
+					"sha512": str(sha1.hexdigest()),
+					"already_exist": True,
+				}
+				
+				await _response.write(json.dumps(answer_data, sort_keys=True, indent=4))
+				return
+			shutil.move(temporary_file, destination_filename)
+			data_metafile = {
+				"sha512": str(sha1.hexdigest()),
+				"size": total_size,
+				'filename': _request.headers["filename"],
+				'mime-type': _request.headers["mime-type"],
+			}
+			tools.file_write_data(destination_filename + ".meta", json.dumps(data_metafile, sort_keys=True, indent=4))
+			answer_data = {
+				"size": total_size,
+				"sha512": str(sha1.hexdigest()),
+				"already_exist": True,
+			}
+			await _response.write(json.dumps(answer_data, sort_keys=True, indent=4))
+		return response.stream(streaming, content_type='application/json')
+	
+	"""
+	@elem_blueprint.get('/' + _name_api + '/<id:int>', strict_slashes=True)
+	@doc.summary("Show resources")
+	@doc.description("Display a listing of the resource.")
+	@doc.produces(content_type='application/json')
+	async def retrive(request, id):
+		value = data_global_elements.get_interface(_name_api).get(id)
+		if value != None:
+			return response.json(value)
+		raise ServerError("No data found", status_code=404)
+	"""
+	
+	
+	_app.blueprint(elem_blueprint)
+
+add_data(app, API_DATA)
+
+import hashlib
+import shutil
+
+
 
 if __name__ == "__main__":
 	debug.info("Start REST application: " + str(rest_config["host"]) + ":" + str(rest_config["port"]))

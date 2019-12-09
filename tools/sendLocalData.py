@@ -13,7 +13,8 @@ import sys
 import hashlib
 import requests  # pip install requests
 import realog.debug as debug
-
+import magic
+import json
 
 class upload_in_chunks(object):
     def __init__(self, filename, chunksize=1 + 13):
@@ -41,40 +42,27 @@ class upload_in_chunks(object):
 #result = requests.post("http://127.0.0.1:15080/data", data=upload_in_chunks(filename, chunksize=4096))
 #print("result : " + str(result) + "  " + result.text)#str(dir(result)))
 
-"""
 
-
-static etk::String extractAndRemove(const etk::String& _inputValue, const char _startMark, const char _stopMark, etk::Vector<etk::String>& _values:
-	_values.clear();
-	etk::String out;
-	bool inside=False;
-	etk::String insideData;
-	for (auto &it : _inputValue:
-		if     inside == False
-		   and it == _startMark:
-			inside = True;
-		elif     inside == True
-		          and it == _stopMark:
-			inside = False;
-			_values.pushBack(insideData);
-			insideData.clear();
+def extract_and_remove(_input_value, _start_mark, _stop_mark):
+	values = []
+	out = ""
+	inside = False
+	inside_data = ""
+	for it in _input_value:
+		if     inside == False \
+		   and it == _start_mark:
+			inside = True
+		elif     inside == True \
+		     and it == _stop_mark:
+			inside = False
+			_values.append(inside_data)
+			inside_data = ""
 		elif inside == True:
-			insideData += it;
+			insideData += it
 		else:
-			out += it;
-		
-	
-	return out;
+			out += it
+	return (out, values)
 
-
-bool progressCall(const etk::String& _value:
-	return False;
-
-
-void progressCallback(const etk::String& _value:
-	debug.info("plop " + _value);
-
-"""
 def create_directory_of_file(_file):
 	path = os.path.dirname(_file)
 	try:
@@ -129,6 +117,7 @@ def calculate_sha512(_path):
 
 def push_video_file(_path, _basic_key={}):
 	file_name, file_extension = os.path.splitext(_path);
+	debug.info("Send file: '" + file_name + "'  with extention " + file_extension)
 	# internal file_extension ...
 	if file_extension == "sha512":
 		debug.verbose("file: '" + _path + "' sha512 extention ...")
@@ -207,6 +196,7 @@ def push_video_file(_path, _basic_key={}):
 	debug.info("check file existance: sha='" + storedSha512 + "'");
 	"""
 	
+	
 	# push only if the file exist
 	"""
 	# TODO : Check the metadata updating ...
@@ -227,176 +217,164 @@ def push_video_file(_path, _basic_key={}):
 		return False;
 	
 	"""
-	result = requests.post("http://127.0.0.1:15080/data", data=upload_in_chunks(_path, chunksize=4096))
-	print("result *********** : " + str(result) + "  " + result.text)#str(dir(result)))
-	"""
-	# Get the media
-	zeus::ProxyMedia media = _srv.get(mediaId).waitFor(echrono::seconds(2000)).get();
-	if media.exist() == False:
-		debug.error("get media error");
-		return False;
-	
-	
-	# TODO: if the media have meta data ==> this mean that the media already added before ...
+	mime = magic.Magic(mime=True)
+	mime_type = mime.from_file(_path)
+	headers_values = {'filename': _path, 'mime-type': mime_type}
+	result_send_data = requests.post("http://127.0.0.1:15080/data", headers=headers_values, data=upload_in_chunks(_path, chunksize=4096))
+	print("result *********** : " + str(result_send_data) + "  " + result_send_data.text)
+	file_name = os.path.basename(file_name)
 	debug.info("Find file_name : '" + file_name + "'");
-	# Remove Date (XXXX) or other title
-	etk::Vector<etk::String> dates;
-	file_name = extractAndRemove(file_name, '(', ')', dates);
-	bool haveDate = False;
-	bool haveTitle = False;
-	for (auto &it: dates:
-		if it.size() == 0:
-			continue;
-		
-		if     it[0] == '0'
-		     or it[0] == '1'
-		     or it[0] == '2'
-		     or it[0] == '3'
-		     or it[0] == '4'
-		     or it[0] == '5'
-		     or it[0] == '6'
-		     or it[0] == '7'
-		     or it[0] == '8'
+	# Remove Date (XXXX) or other titreadsofarle
+	file_name, dates = extract_and_remove(file_name, '(', ')');
+	have_date = False
+	have_Title = False
+	for it in dates:
+		if len(it) == 0:
+			continue
+		if      it[0] == '0' \
+		     or it[0] == '1' \
+		     or it[0] == '2' \
+		     or it[0] == '3' \
+		     or it[0] == '4' \
+		     or it[0] == '5' \
+		     or it[0] == '6' \
+		     or it[0] == '7' \
+		     or it[0] == '8' \
 		     or it[0] == '9':
 			# find a date ...
-			if haveDate == True:
-				debug.info("                '" + file_name + "'");
-				debug.error("Parse Date error : () : " + it + " ==> multiple date");
-				continue;
-			
-			haveDate = True;
-			_basic_key.set("date", it);
+			if have_date == True:
+				debug.info("                '" + file_name + "'")
+				debug.error("Parse Date error : () : " + it + " ==> multiple date")
+				continue
+			have_date = True
+			_basic_key["date"] = it
 		else:
-			if haveTitle == True:
-				debug.info("                '" + file_name + "'");
-				debug.error("Parse Title error : () : " + it + " ==> multiple title");
-				continue;
-			
-			haveTitle = True;
+			if have_Title == True:
+				debug.info("                '" + file_name + "'")
+				debug.error("Parse Title error : () : " + it + " ==> multiple title")
+				continue
+			have_Title = True
 			# Other title
-			_basic_key.set("title2", it);
-		
+			_basic_key.set["title2"] = it;
 	
 	# remove unneeded date
-	if haveDate == False:
-		_basic_key.set("date", "");
+	if have_date == False:
+		_basic_key["date"] = ""
 	
 	# remove unneeded title 2
-	if haveTitle == False:
-		_basic_key.set("title2", "");
+	if have_Title == False:
+		_basic_key["title2"] = ""
 	
 	# Remove the actors [XXX YYY][EEE TTT]...
-	etk::Vector<etk::String> acthors;
-	file_name = extractAndRemove(file_name, '[', ']', acthors);
-	if acthors.size() > 0:
-		debug.info("                '" + file_name + "'");
-		etk::String actorList;
-		for (auto &itActor : acthors:
-			if actorList != "":
-				actorList += ";";
-			
-			actorList += itActor;
-		
-		_basic_key.set("acthors", actorList);
+	file_name, acthors = extract_and_remove(file_name, '[', ']');
+	if len(acthors) > 0:
+		debug.info("                '" + file_name + "'")
+		actor_list = []
+		for it_actor in acthors:
+			if actor_list != "":
+				actor_list += ";"
+			actor_list.append(it_actor)
+		_basic_key["acthors"] = actor_list
 	
+	list_element_base = file_name.split('-')
 	
-	# remove file_extension
-	file_name = etk::String(file_name.begin(), file_name.begin() + file_name.size() - (file_extension.size()+1));
-	
-	etk::Vector<etk::String> listElementBase = etk::split(file_name, '-');
-	
-	etk::Vector<etk::String> listElement;
-	etk::String tmpStartString;
-	for (size_t iii=0; iii<listElementBase.size(); ++iii:
-		if     listElementBase[iii][0] != 's'
-		   and listElementBase[iii][0] != 'e':
-			if tmpStartString != "":
-				tmpStartString += '-';
-			
-			tmpStartString += listElementBase[iii];
+	list_element = [];
+	tmp_start_string = "";
+	for iii in range(0,len(list_element_base)):
+		if     list_element_base[iii][0] != 's' \
+		   and list_element_base[iii][0] != 'e':
+			if tmp_start_string != "":
+				tmp_start_string += '-'
+			tmp_start_string += list_element_base[iii]
 		else:
-			listElement.pushBack(tmpStartString);
-			tmpStartString = "";
-			for (/* nothing to do */; iii<listElementBase.size(); ++iii:
-				listElement.pushBack(listElementBase[iii]);
-			
-		
-		
+			list_element.append(tmp_start_string)
+			tmp_start_string = ""
+			while iii<len(list_element_base):
+				list_element.append(list_element_base[iii])
+				iii += 1
 	
-	if tmpStartString != "":
-		listElement.pushBack(tmpStartString);
+	if tmp_start_string != "":
+		list_element.append(tmp_start_string)
 	
-	if listElement.size() == 1:
+	if len(list_element) == 1:
 		# nothing to do , it might be a film ...
-		_basic_key.set("title", etk::toString(listElement[0]));
+		_basic_key["title"] = list_element[0]
 	else:
-		/*
-		for (auto &itt : listElement:
-			debug.info("    " + itt);
-		
-		*/
-		if     listElement.size() > 3
-		   and listElement[1][0] == 's'
-		   and listElement[2][0] == 'e':
+		if     len(list_element) > 3 \
+		   and list_element[1][0] == 's' \
+		   and list_element[2][0] == 'e':
 			# internal formalisme ...
-			int32_t saison = -1;
-			int32_t episode = -1;
-			etk::String seriesName = listElement[0];
+			saison = -1;
+			episode = -1;
+			series_name = list_element[0];
 			
-			_basic_key.set("series-name", etk::toString(seriesName));
-			etk::String fullEpisodeName = listElement[3];
-			for (int32_t yyy=4; yyy<listElement.size(); ++yyy:
-				fullEpisodeName += "-" + listElement[yyy];
+			_basic_key["series-name"] = series_name
+			full_episode_name = list_element[3]
+			for yyy in range(4, len(list_element)):
+				full_episode_name += "-" + list_element[yyy]
 			
-			_basic_key.set("title", etk::toString(fullEpisodeName));
-			if etk::String(&listElement[1][1]) == "XX":
+			_basic_key["title"] = full_episode_name
+			if list_element[1][1:] == "XX":
 				# saison unknow ... ==> nothing to do ...
+				pass
 			else:
-				saison = etk::string_to_int32_t(&listElement[1][1]);
+				saison = int(list_element[1][1:]);
 			
-			if etk::String(&listElement[2][1]) == "XX":
+			if list_element[2][1:] == "XX":
 				# episode unknow ... ==> nothing to do ...
+				pass
 			else:
-				episode = etk::string_to_int32_t(&listElement[2][1]);
-				
-				_basic_key.set("episode", etk::toString(episode));
+				episode = int(list_element[2][1:]);
+				_basic_key["episode"] = episode
 			
 			debug.info("Find a internal mode series: :");
 			debug.info("    origin       : '" + file_name + "'");
-			etk::String saisonPrint = "XX";
-			etk::String episodePrint = "XX";
+			saisonPrint = "XX";
+			episodePrint = "XX";
 			if saison < 0:
 				# nothing to do
+				pass
 			elif saison < 10:
-				saisonPrint = "0" + etk::toString(saison);
-				_basic_key.set("saison", etk::toString(saison));
+				saisonPrint = "0" + str(saison)
+				_basic_key["saison"] = str(saison)
 			else:
-				saisonPrint = etk::toString(saison);
-				_basic_key.set("saison", etk::toString(saison));
+				saisonPrint = str(saison)
+				_basic_key["saison"] = str(saison)
 			
 			if episode < 0:
 				# nothing to do
+				pass
 			elif episode < 10:
-				episodePrint = "0" + etk::toString(episode);
-				_basic_key.set("episode", etk::toString(episode));
+				episodePrint = "0" + str(episode);
+				_basic_key["episode"] = str(episode)
 			else:
-				episodePrint = etk::toString(episode);
-				_basic_key.set("episode", etk::toString(episode));
+				episodePrint = str(episode);
+				_basic_key["episode"] = str(episode)
 			
-			debug.info("     ==> '" + seriesName + "-s" + saisonPrint + "-e" + episodePrint + "-" + fullEpisodeName + "'");
-		
+			debug.info("     ==> '" + series_name + "-s" + saisonPrint + "-e" + episodePrint + "-" + full_episode_name + "'");
 	
-	# send all meta data:
-	zeus::FutureGroup group;
-	for (auto &itKey : _basic_key:
-		if itKey.second != "":
-			APPL_WARNING("Set metaData: " + itKey.first + " : " + itKey.second);
-		
-		group.add(media.setMetadata(itKey.first, itKey.second));
 	
-	group.wait();
-	"""
-	return True;
+	result_send_data_json = json.loads(result_send_data.text)
+	debug.info("pared meta data: " + json.dumps(_basic_key, sort_keys=True, indent=4))
+	data_model = {
+		"type_id": _basic_key["type"],
+		"sha512": result_send_data_json["sha512"],
+		"saison": _basic_key["saison"],
+		"episode": _basic_key["episode"],
+		"group_name": _basic_key["series-name"],
+		#"group_id": int,
+		"name": _basic_key["title"],
+		"description": None,
+		# creating time
+		"date": _basic_key["date"],
+		"actors": _basic_key["acthors"],
+		# number of second
+		"time": None,
+	}
+	result_send_data = requests.post("http://127.0.0.1:15080/video", data=json.dumps(data_model, sort_keys=True, indent=4))
+	print("result *********** : " + str(result_send_data) + "  " + result_send_data.text)
+	
+	return True
 
 
 def install_video_path( _path, _basic_key = {}):

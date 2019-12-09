@@ -10,6 +10,8 @@ RUN pip install python-dateutil
 
 RUN pip install realog
 
+RUN pip install python-magic
+
 EXPOSE 80
 
 ADD src /application/
