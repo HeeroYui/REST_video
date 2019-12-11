@@ -152,6 +152,18 @@ def add_group(_app, _name_api):
 	async def create(request):
 		return response.json(data_global_elements.get_interface(_name_api).post(request.json))
 	
+	@elem_blueprint.post('/' + _name_api + "/find", strict_slashes=True)
+	@doc.summary("Create new resource if the name does not already exist")
+	@doc.description("Store a newly created resource in storage.")
+	@doc.consumes(DataModel, location='body')#, required=True)
+	@doc.response_success(status=201, description='If successful created')
+	async def find_with_name(request):
+		api = data_global_elements.get_interface(_name_api)
+		for elem in api.bdd:
+			if elem["name"] == request.json["name"]:
+				return response.json({"id": elem["id"]})
+		raise ServerError("No data found", status_code=404)
+	
 	@elem_blueprint.get('/' + _name_api + '/<id:int>', strict_slashes=True)
 	@doc.summary("Show resources")
 	@doc.description("Display a listing of the resource.")
@@ -184,6 +196,8 @@ def add_group(_app, _name_api):
 
 add_group(app, API_GROUP)
 
+
+
 def add_saison(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
 	
@@ -205,6 +219,19 @@ def add_saison(_app, _name_api):
 	@doc.response_success(status=201, description='If successful created')
 	async def create(request):
 		return response.json(data_global_elements.get_interface(_name_api).post(request.json))
+	
+	@elem_blueprint.post('/' + _name_api + "/find", strict_slashes=True)
+	@doc.summary("find a season existance")
+	@doc.description("return the ID of the season table.")
+	@doc.consumes(DataModel, location='body')
+	@doc.response_success(status=201, description='If successful created')
+	async def find_with_name(request):
+		api = data_global_elements.get_interface(_name_api)
+		for elem in api.bdd:
+			if     elem["group_id"] == request.json["group_id"] \
+			   and elem["number"] == request.json["number"]:
+				return response.json({"id": elem["id"]})
+		raise ServerError("No data found", status_code=404)
 	
 	@elem_blueprint.get('/' + _name_api + '/<id:int>', strict_slashes=True)
 	@doc.summary("Show resources")
@@ -243,7 +270,7 @@ def add_video(_app, _name_api):
 	
 	class DataModel:
 		type_id = int
-		saison = int
+		saison_id = int
 		episode = int
 		group_id = int
 		name = str
@@ -266,6 +293,10 @@ def add_video(_app, _name_api):
 	@doc.consumes(DataModel, location='body')#, required=True)
 	@doc.response_success(status=201, description='If successful created')
 	async def create(request):
+		"""
+		if "group_name" in request.json.keys():
+			id_group = data_global_elements.get_interface(API_GROUP).find_or_create_name(request.json["group_name"])
+		"""
 		return response.json(data_global_elements.get_interface(_name_api).post(request.json))
 	
 	@elem_blueprint.get('/' + _name_api + '/<id:int>', strict_slashes=True)

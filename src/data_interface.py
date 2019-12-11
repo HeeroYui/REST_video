@@ -8,8 +8,6 @@
 ## @license MPL v2.0 (see license file)
 ##
 
-global_id = 0;
-
 import tools
 import json
 from realog import debug
@@ -20,19 +18,20 @@ class DataInterface():
 		self.file = _file
 		self.bdd = []
 		self.need_save = False
+		self.last_id = 0
 		if tools.exist(self.file) == False:
 			self.need_save = True
 		else:
 			data = tools.file_read_data(self.file)
 			self.bdd = json.loads(data)
+		self.upgrade_global_bdd_id();
 	
-	def upgrade_global_bd_id(self):
-		global global_id
+	def upgrade_global_bdd_id(self):
 		for elem in self.bdd:
 			if 'id' not in elem.keys():
 				continue
-			if elem["id"] >= global_id:
-				global_id = elem["id"] + 1
+			if elem["id"] >= self.last_id:
+				self.last_id = elem["id"] + 1
 	
 	def get_table_index(id):
 		id_in_bdd = 0
@@ -84,9 +83,8 @@ class DataInterface():
 	
 	def post(self, value):
 		debug.info("post " + self.name)
-		global global_id
-		value["id"] = global_id
-		global_id += 1
+		value["id"] = self.last_id
+		self.last_id += 1
 		self.bdd.append(value)
 		self.need_save = True
 		return value

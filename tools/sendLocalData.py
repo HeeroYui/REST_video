@@ -257,30 +257,24 @@ def push_video_file(_path, _basic_key={}):
 			# Other title
 			_basic_key.set["title2"] = it;
 	
-	# remove unneeded date
-	if have_date == False:
-		_basic_key["date"] = ""
-	
-	# remove unneeded title 2
-	if have_Title == False:
-		_basic_key["title2"] = ""
-	
 	# Remove the actors [XXX YYY][EEE TTT]...
-	file_name, acthors = extract_and_remove(file_name, '[', ']');
-	if len(acthors) > 0:
+	file_name, actors = extract_and_remove(file_name, '[', ']');
+	if len(actors) > 0:
 		debug.info("                '" + file_name + "'")
 		actor_list = []
-		for it_actor in acthors:
+		for it_actor in actors:
 			if actor_list != "":
 				actor_list += ";"
 			actor_list.append(it_actor)
-		_basic_key["acthors"] = actor_list
-	
+		_basic_key["actors"] = actor_list
 	list_element_base = file_name.split('-')
+	debug.warning("==> Title file: " + file_name)
+	debug.warning("==> Title cut : " + str(list_element_base))
 	
 	list_element = [];
 	tmp_start_string = "";
-	for iii in range(0,len(list_element_base)):
+	iii = 0
+	while iii <len(list_element_base):
 		if     list_element_base[iii][0] != 's' \
 		   and list_element_base[iii][0] != 'e':
 			if tmp_start_string != "":
@@ -292,9 +286,14 @@ def push_video_file(_path, _basic_key={}):
 			while iii<len(list_element_base):
 				list_element.append(list_element_base[iii])
 				iii += 1
+		iii += 1
+	
+	debug.warning("==> start elem: " + str(tmp_start_string))
 	
 	if tmp_start_string != "":
 		list_element.append(tmp_start_string)
+		
+	debug.warning("==> list_element : " + str(list_element))
 	
 	if len(list_element) == 1:
 		# nothing to do , it might be a film ...
@@ -359,18 +358,31 @@ def push_video_file(_path, _basic_key={}):
 	data_model = {
 		"type_id": _basic_key["type"],
 		"sha512": result_send_data_json["sha512"],
-		"saison": _basic_key["saison"],
-		"episode": _basic_key["episode"],
-		"group_name": _basic_key["series-name"],
 		#"group_id": int,
 		"name": _basic_key["title"],
-		"description": None,
-		# creating time
-		"date": _basic_key["date"],
-		"actors": _basic_key["acthors"],
 		# number of second
 		"time": None,
 	}
+	for elem in ["actors", "date", "description", "episode", "title2"]:
+		if elem in _basic_key.keys():
+			data_model[elem] = _basic_key[elem]
+	if "series-name" in _basic_key.keys():
+		result_group_data = requests.post("http://127.0.0.1:15080/group/find", data=json.dumps({"name":_basic_key["series-name"]}, sort_keys=True, indent=4))
+		print("Create group ??? *********** : " + str(result_group_data) + "  " + result_group_data.text)
+		if result_group_data.status_code == 404:
+			result_group_data = requests.post("http://127.0.0.1:15080/group", data=json.dumps({"name":_basic_key["series-name"]}, sort_keys=True, indent=4))
+			print("yes we create new group *********** : " + str(result_group_data) + "  " + result_group_data.text)
+		group_id = result_group_data.json()["id"]
+		data_model["group_id"] = group_id
+		if "saison" in _basic_key.keys():
+			result_saison_data = requests.post("http://127.0.0.1:15080/saison/find", data=json.dumps({"number":_basic_key["saison"], "group_id":group_id}, sort_keys=True, indent=4))
+			print("Create saison ??? *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
+			if result_saison_data.status_code == 404:
+				result_saison_data = requests.post("http://127.0.0.1:15080/saison", data=json.dumps({"number":_basic_key["saison"], "group_id":group_id}, sort_keys=True, indent=4))
+				print("yes we create new saison *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
+			saison_id = result_saison_data.json()["id"]
+			data_model["saison_id"] = saison_id
+			
 	result_send_data = requests.post("http://127.0.0.1:15080/video", data=json.dumps(data_model, sort_keys=True, indent=4))
 	print("result *********** : " + str(result_send_data) + "  " + result_send_data.text)
 	
