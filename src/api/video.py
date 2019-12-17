@@ -20,6 +20,7 @@ from sanic import Sanic
 from sanic import response
 from sanic import views
 from sanic import Blueprint
+from sanic.exceptions import ServerError
 
 from sanic_simple_swagger import swagger_blueprint, openapi_blueprint
 from sanic_simple_swagger import doc
@@ -30,6 +31,22 @@ import data_global_elements
 
 def add(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
+	
+	class DataModelBdd:
+		id = int
+		sha512 = str
+		type_id = int
+		saison_id = int
+		episode = [int, type(None)]
+		group_id = int
+		name = str
+		description = str
+		# creating time
+		date = str
+		# number of second
+		time = [int, type(None)]
+	
+	data_global_elements.get_interface(_name_api).set_data_model(DataModelBdd)
 	
 	class DataModel:
 		type_id = int
@@ -60,6 +77,10 @@ def add(_app, _name_api):
 		if "group_name" in request.json.keys():
 			id_group = data_global_elements.get_interface(API_GROUP).find_or_create_name(request.json["group_name"])
 		"""
+		if "episode" not in request.json.keys():
+			request.json["episode"] = None
+		else:
+			request.json["episode"] = int(request.json["episode"])
 		return response.json(data_global_elements.get_interface(_name_api).post(request.json))
 	
 	@elem_blueprint.get('/' + _name_api + '/<id:int>', strict_slashes=True)

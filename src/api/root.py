@@ -20,6 +20,7 @@ from sanic import Sanic
 from sanic import response
 from sanic import views
 from sanic import Blueprint
+from sanic.exceptions import ServerError
 
 from sanic_simple_swagger import swagger_blueprint, openapi_blueprint
 from sanic_simple_swagger import doc

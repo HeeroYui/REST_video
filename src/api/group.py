@@ -20,6 +20,7 @@ from sanic import Sanic
 from sanic import response
 from sanic import views
 from sanic import Blueprint
+from sanic.exceptions import ServerError
 
 from sanic_simple_swagger import swagger_blueprint, openapi_blueprint
 from sanic_simple_swagger import doc
@@ -30,6 +31,12 @@ import data_global_elements
 
 def add(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
+	
+	class DataModelBdd:
+		id = int
+		name = str
+	
+	data_global_elements.get_interface(_name_api).set_data_model(DataModelBdd)
 	
 	class DataModel:
 		name = str

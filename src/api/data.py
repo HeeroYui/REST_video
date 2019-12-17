@@ -20,6 +20,7 @@ from sanic import Sanic
 from sanic import response
 from sanic import views
 from sanic import Blueprint
+from sanic.exceptions import ServerError
 
 from sanic_simple_swagger import swagger_blueprint, openapi_blueprint
 from sanic_simple_swagger import doc
@@ -27,6 +28,9 @@ from sanic_simple_swagger import doc
 import tools
 import data_interface
 import data_global_elements
+
+import hashlib
+import shutil
 
 tmp_value = 0
 
@@ -55,11 +59,11 @@ def add(_app, _name_api):
 		async def streaming(_response):
 			debug.info("streaming " + str(_response));
 			total_size = 0
-			temporary_file = os.path.join(app.config['REST_TMP_DATA'], str(tmp_value) + ".tmp")
-			if not os.path.exists(app.config['REST_TMP_DATA']):
-				os.makedirs(app.config['REST_TMP_DATA'])
-			if not os.path.exists(app.config['REST_MEDIA_DATA']):
-				os.makedirs(app.config['REST_MEDIA_DATA'])
+			temporary_file = os.path.join(_app.config['REST_TMP_DATA'], str(tmp_value) + ".tmp")
+			if not os.path.exists(_app.config['REST_TMP_DATA']):
+				os.makedirs(_app.config['REST_TMP_DATA'])
+			if not os.path.exists(_app.config['REST_MEDIA_DATA']):
+				os.makedirs(_app.config['REST_MEDIA_DATA'])
 			file_stream = open(temporary_file,"wb")
 			sha1 = hashlib.sha512()
 			while True:
@@ -73,7 +77,7 @@ def add(_app, _name_api):
 				sha1.update(body)
 			file_stream.close()
 			print("SHA512: " + str(sha1.hexdigest()))
-			destination_filename = os.path.join(app.config['REST_MEDIA_DATA'], str(sha1.hexdigest()))
+			destination_filename = os.path.join(_app.config['REST_MEDIA_DATA'], str(sha1.hexdigest()))
 			if os.path.isfile(destination_filename) == True:
 				answer_data = {
 					"size": total_size,

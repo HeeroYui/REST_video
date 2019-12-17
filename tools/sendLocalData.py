@@ -375,10 +375,10 @@ def push_video_file(_path, _basic_key={}):
 		group_id = result_group_data.json()["id"]
 		data_model["group_id"] = group_id
 		if "saison" in _basic_key.keys():
-			result_saison_data = requests.post("http://127.0.0.1:15080/saison/find", data=json.dumps({"number":_basic_key["saison"], "group_id":group_id}, sort_keys=True, indent=4))
+			result_saison_data = requests.post("http://127.0.0.1:15080/saison/find", data=json.dumps({"number":int(_basic_key["saison"]), "group_id":group_id}, sort_keys=True, indent=4))
 			print("Create saison ??? *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
 			if result_saison_data.status_code == 404:
-				result_saison_data = requests.post("http://127.0.0.1:15080/saison", data=json.dumps({"number":_basic_key["saison"], "group_id":group_id}, sort_keys=True, indent=4))
+				result_saison_data = requests.post("http://127.0.0.1:15080/saison", data=json.dumps({"number":int(_basic_key["saison"]), "group_id":group_id}, sort_keys=True, indent=4))
 				print("yes we create new saison *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
 			saison_id = result_saison_data.json()["id"]
 			data_model["saison_id"] = saison_id

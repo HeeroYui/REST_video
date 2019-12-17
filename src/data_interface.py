@@ -12,8 +12,11 @@ import tools
 import json
 from realog import debug
 
+from sanic.exceptions import ServerError
+
 class DataInterface():
 	def __init__(self, _name, _file):
+		self.model = None
 		self.name = _name
 		self.file = _file
 		self.bdd = []
@@ -25,6 +28,51 @@ class DataInterface():
 			data = tools.file_read_data(self.file)
 			self.bdd = json.loads(data)
 		self.upgrade_global_bdd_id();
+	
+	def set_data_model(self, _data_model):
+		self.model = _data_model
+	
+	def check_with_model(self, _data):
+		if self.model == None:
+			return True
+		values = []
+		for elem in dir(self.model):
+			if elem[:2] == "__":
+				continue
+			values.append(elem)
+		have_error = False
+		for key in _data.keys():
+			if key not in values:
+				have_error = True
+				# TODO: ...
+				debug.warning("Add element that is not allowed " + key + " not in " + str(values))
+		for elem in values:
+			if key not in _data.keys():
+				have_error = True
+				# TODO: ...
+				debug.warning("Missing key " + elem + " not in " + str(_data.keys()))
+		if have_error == True:
+			return False
+		for key in _data.keys():
+			elem = getattr(self.model, key)
+			if type(elem) == list:
+				find_error = True
+				for my_type in elem:
+					if type(_data[key]) == my_type:
+						find_error = False
+						break
+				if find_error == True:
+					debug.warning("data : " + str(_data))
+					tmp_list = []
+					for my_type in elem:
+						tmp_list.append(my_type.__name__)
+					debug.warning("[key='" + key + "'] try to add wrong type in BDD " + type(_data[key]).__name__ + " is not: " + str(my_type))
+			else:
+				if type(_data[key]) != getattr(self.model, key):
+					debug.warning("data : " + str(_data))
+					debug.warning("[key='" + key + "'] try to add wrong type in BDD " + type(_data[key]).__name__ + " is not: " + getattr(self.model, key).__name__)
+					return False
+		return True
 	
 	def upgrade_global_bdd_id(self):
 		for elem in self.bdd:
@@ -85,6 +133,8 @@ class DataInterface():
 		debug.info("post " + self.name)
 		value["id"] = self.last_id
 		self.last_id += 1
+		if self.check_with_model(value) == False:
+			raise ServerError("Corelation with BDD error", status_code=404)
 		self.bdd.append(value)
 		self.need_save = True
 		return value

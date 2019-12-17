@@ -32,6 +32,8 @@ import datetime
 import time, threading
 import realog.debug as debug
 
+debug.enable_color()
+
 import tools
 import data_interface
 import data_global_elements
@@ -91,8 +93,6 @@ api_video.add(app, API_VIDEO)
 import api.data as api_data
 api_data.add(app, API_DATA)
 
-import hashlib
-import shutil
 
 
 
