@@ -40,10 +40,13 @@ docker-compose up -d --force-recreate --build
 
 Run the application (debug)
 ===========================
+before the first run:
+```
+cp -r data_base data
+```
 
 ```
-cd src
-./app_video.py
+./src/app_video.py
 ```
 
 or
