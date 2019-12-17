@@ -46,3 +46,8 @@ cd src
 ./app_video.py
 ```
 
+or
+```
+SANIC_REST_PORT=15080 ./src/app_video.py
+```
+

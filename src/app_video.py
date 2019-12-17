@@ -10,6 +10,8 @@
 #pip install flask --user
 #pip install flask_restful --user
 #pip install python-dateutil --user
+#pip install sanic --user
+#pip install sanic_simple_swagger --user
 
 from sanic import Sanic
 from sanic import response
@@ -30,12 +32,9 @@ import datetime
 import time, threading
 import realog.debug as debug
 
-import config
 import tools
 import data_interface
 import data_global_elements
-
-rest_config = config.get_rest_config()
 
 app = Sanic("REST_video")
 
@@ -46,7 +45,16 @@ app.config['API_CONTACT_EMAIL'] = "yui.heero@gmail.com"
 app.config['API_LICENSE_NAME'] = 'MPL 2.0'
 app.config['API_LICENSE_URL'] = 'https://www.mozilla.org/en-US/MPL/2.0/'
 app.config['schemes'] = ['http', 'https']
-
+if "REST_TMP_DATA" not in app.config.keys():
+	app.config['REST_TMP_DATA'] = "tmp"
+if "REST_MEDIA_DATA" not in app.config.keys():
+	app.config['REST_MEDIA_DATA'] = os.path.join("data", "media")
+if "REST_DATA" not in app.config.keys():
+	app.config['REST_DATA'] = "data"
+if "REST_HOST" not in app.config.keys():
+	app.config['REST_HOST'] = "localhost"
+if "REST_PORT" not in app.config.keys():
+	app.config['REST_PORT'] = "80"
 
 app.blueprint(openapi_blueprint)
 app.blueprint(swagger_blueprint)
@@ -65,7 +73,7 @@ async def test(request):
 
 
 def add_interface(_name):
-	data_global_elements.add_interface(_name, data_interface.DataInterface(_name, os.path.join(tools.get_run_path(), "data", "bdd_" + _name + ".json")))
+	data_global_elements.add_interface(_name, data_interface.DataInterface(_name, os.path.join(tools.get_run_path(), app.config['REST_DATA'], "bdd_" + _name + ".json")))
 
 API_TYPE = "type"
 add_interface(API_TYPE)
@@ -358,11 +366,11 @@ def add_data(_app, _name_api):
 		async def streaming(_response):
 			debug.info("streaming " + str(_response));
 			total_size = 0
-			temporary_file = os.path.join(rest_config["tmp_data"], str(tmp_value) + ".tmp")
-			if not os.path.exists(rest_config["tmp_data"]):
-				os.makedirs(rest_config["tmp_data"])
-			if not os.path.exists(rest_config["data_media"]):
-				os.makedirs(rest_config["data_media"])
+			temporary_file = os.path.join(app.config['REST_TMP_DATA'], str(tmp_value) + ".tmp")
+			if not os.path.exists(app.config['REST_TMP_DATA']):
+				os.makedirs(app.config['REST_TMP_DATA'])
+			if not os.path.exists(app.config['REST_MEDIA_DATA']):
+				os.makedirs(app.config['REST_MEDIA_DATA'])
 			file_stream = open(temporary_file,"wb")
 			sha1 = hashlib.sha512()
 			while True:
@@ -376,7 +384,7 @@ def add_data(_app, _name_api):
 				sha1.update(body)
 			file_stream.close()
 			print("SHA512: " + str(sha1.hexdigest()))
-			destination_filename = os.path.join(rest_config["data_media"], str(sha1.hexdigest()))
+			destination_filename = os.path.join(app.config['REST_MEDIA_DATA'], str(sha1.hexdigest()))
 			if os.path.isfile(destination_filename) == True:
 				answer_data = {
 					"size": total_size,
@@ -425,9 +433,9 @@ import shutil
 
 
 if __name__ == "__main__":
-	debug.info("Start REST application: " + str(rest_config["host"]) + ":" + str(rest_config["port"]))
+	debug.info("Start REST application: " + str(app.config['REST_HOST']) + ":" + str(app.config['REST_PORT']))
 	app.config.REQUEST_MAX_SIZE=10*1024*1024*1024
-	app.run(host=rest_config["host"], port=int(rest_config["port"]))
+	app.run(host=app.config['REST_HOST'], port=int(app.config['REST_PORT']))
 	debug.info("END program");
 	sys.exit(0)
 
