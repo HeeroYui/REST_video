@@ -16,6 +16,8 @@ import realog.debug as debug
 import magic
 import json
 
+debug.enable_color();
+
 class upload_in_chunks(object):
     def __init__(self, filename, chunksize=1 + 13):
         self.filename = filename
@@ -40,7 +42,7 @@ class upload_in_chunks(object):
 
 #filename = 'Totally_Spies.mp4'
 #result = requests.post("http://127.0.0.1:15080/data", data=upload_in_chunks(filename, chunksize=4096))
-#print("result : " + str(result) + "  " + result.text)#str(dir(result)))
+#debug.info("result : " + str(result) + "  " + result.text)#str(dir(result)))
 
 
 def extract_and_remove(_input_value, _start_mark, _stop_mark):
@@ -221,7 +223,7 @@ def push_video_file(_path, _basic_key={}):
 	mime_type = mime.from_file(_path)
 	headers_values = {'filename': _path, 'mime-type': mime_type}
 	result_send_data = requests.post("http://127.0.0.1:15080/data", headers=headers_values, data=upload_in_chunks(_path, chunksize=4096))
-	print("result *********** : " + str(result_send_data) + "  " + result_send_data.text)
+	debug.info("result *********** : " + str(result_send_data) + "  " + result_send_data.text)
 	file_name = os.path.basename(file_name)
 	debug.info("Find file_name : '" + file_name + "'");
 	# Remove Date (XXXX) or other titreadsofarle
@@ -324,7 +326,7 @@ def push_video_file(_path, _basic_key={}):
 				pass
 			else:
 				episode = int(list_element[2][1:]);
-				_basic_key["episode"] = episode
+				_basic_key["episode"] = int(episode)
 			
 			debug.info("Find a internal mode series: :");
 			debug.info("    origin       : '" + file_name + "'");
@@ -345,10 +347,10 @@ def push_video_file(_path, _basic_key={}):
 				pass
 			elif episode < 10:
 				episodePrint = "0" + str(episode);
-				_basic_key["episode"] = str(episode)
+				_basic_key["episode"] = episode
 			else:
 				episodePrint = str(episode);
-				_basic_key["episode"] = str(episode)
+				_basic_key["episode"] = episode
 			
 			debug.info("     ==> '" + series_name + "-s" + saisonPrint + "-e" + episodePrint + "-" + full_episode_name + "'");
 	
@@ -363,28 +365,28 @@ def push_video_file(_path, _basic_key={}):
 		# number of second
 		"time": None,
 	}
-	for elem in ["actors", "date", "description", "episode", "title2"]:
+	for elem in ["date", "description", "episode"]: #["actors", "date", "description", "episode", "title2"]:
 		if elem in _basic_key.keys():
 			data_model[elem] = _basic_key[elem]
 	if "series-name" in _basic_key.keys():
 		result_group_data = requests.post("http://127.0.0.1:15080/group/find", data=json.dumps({"name":_basic_key["series-name"]}, sort_keys=True, indent=4))
-		print("Create group ??? *********** : " + str(result_group_data) + "  " + result_group_data.text)
+		debug.info("Create group ??? *********** : " + str(result_group_data) + "  " + result_group_data.text)
 		if result_group_data.status_code == 404:
 			result_group_data = requests.post("http://127.0.0.1:15080/group", data=json.dumps({"name":_basic_key["series-name"]}, sort_keys=True, indent=4))
-			print("yes we create new group *********** : " + str(result_group_data) + "  " + result_group_data.text)
+			debug.info("yes we create new group *********** : " + str(result_group_data) + "  " + result_group_data.text)
 		group_id = result_group_data.json()["id"]
 		data_model["group_id"] = group_id
 		if "saison" in _basic_key.keys():
 			result_saison_data = requests.post("http://127.0.0.1:15080/saison/find", data=json.dumps({"number":int(_basic_key["saison"]), "group_id":group_id}, sort_keys=True, indent=4))
-			print("Create saison ??? *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
+			debug.info("Create saison ??? *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
 			if result_saison_data.status_code == 404:
 				result_saison_data = requests.post("http://127.0.0.1:15080/saison", data=json.dumps({"number":int(_basic_key["saison"]), "group_id":group_id}, sort_keys=True, indent=4))
-				print("yes we create new saison *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
+				debug.info("yes we create new saison *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
 			saison_id = result_saison_data.json()["id"]
 			data_model["saison_id"] = saison_id
 			
 	result_send_data = requests.post("http://127.0.0.1:15080/video", data=json.dumps(data_model, sort_keys=True, indent=4))
-	print("result *********** : " + str(result_send_data) + "  " + result_send_data.text)
+	debug.info("result *********** : " + str(result_send_data) + "  " + result_send_data.text)
 	
 	return True
 
@@ -517,6 +519,7 @@ my_args.add("v", "verbose", list=[
 								["6","extreme_verbose"],
 								], desc="display debug level (verbose) default =2")
 my_args.add("a", "action", list=[
+								["tree","List all the files in a tree view ..."],
 								["list","List all the files"],
 								["push","push a single file"],
 								["push_path","push a full folder"],
@@ -540,9 +543,9 @@ def usage():
 def version():
 	color = debug.get_color_set()
 	import pkg_resources
-	print("version: 0.0.0")
+	debug.info("version: 0.0.0")
 	foldername = os.path.dirname(__file__)
-	print("source folder is: " + foldername)
+	debug.info("source folder is: " + foldername)
 	exit(0)
 
 folder = "dataPush"
@@ -613,6 +616,88 @@ elif requestAction == "list":
 	debug.info("============================================");
 	debug.info("== list files: ");
 	debug.info("============================================");
+	list_types = requests.get("http://127.0.0.1:15080/type")
+	if list_types.status_code != 200:
+		debug.warning(" !! ca, ot get type list ... " + str(list_types.status_code) + "")
+	for elem in list_types.json():
+		debug.info(" get type id: " + str(elem["id"]))
+		debug.info("        name: " + str(elem["name"]))
+		# get the count of video in this type
+		result_count = requests.get("http://127.0.0.1:15080/type/" + str(elem["id"]) + "/count")
+		if result_count.status_code == 200:
+			debug.info("        count: " + str(result_count.json()["count"]))
+		else:
+			debug.warning("        count: !!!!!! " + str(result_count.status_code) + "")
+		# get all the video list
+		result_video = requests.get("http://127.0.0.1:15080/type/" + str(elem["id"]) + "/video")
+		if result_video.status_code == 200:
+			if len(result_video.json()) != 0:
+				debug.info("        List video: " + str(result_video.json()))
+		else:
+			debug.warning("        List video: !!!!!! " + str(result_video.status_code) + "")
+		# get list of groups for this type
+		result_groups = requests.get("http://127.0.0.1:15080/type/" + str(elem["id"]) + "/group")
+		if result_groups.status_code == 200:
+			if len(result_groups.json()) != 0:
+				debug.info("        List group: " + str(result_groups.json()))
+		else:
+			debug.warning("        List group: !!!!!! " + str(result_groups.status_code) + "")
+		# get list of video without groups
+		result_video_solo = requests.get("http://127.0.0.1:15080/type/" + str(elem["id"]) + "/video_no_group")
+		if result_video_solo.status_code == 200:
+			if len(result_video_solo.json()) != 0:
+				debug.info("        List video solo: " + str(result_video_solo.json()))
+		else:
+			debug.warning("        List video solo: !!!!!! " + str(result_video_solo.status_code) + "")
+elif requestAction == "tree":
+	debug.info("============================================");
+	debug.info("== tree files: ");
+	debug.info("============================================");
+	list_types = requests.get("http://127.0.0.1:15080/type")
+	if list_types.status_code != 200:
+		debug.warning(" !! ca, ot get type list ... " + str(list_types.status_code) + "")
+	for elem in list_types.json():
+		debug.info("-------------------------------------------------")
+		debug.info(" " + str(elem["name"]))
+		debug.info("-------------------------------------------------")
+		# First get all the groups:
+		result_groups = requests.get("http://127.0.0.1:15080/type/" + str(elem["id"]) + "/group")
+		if result_groups.status_code == 200:
+			for elem_group_id in result_groups.json():
+				result_group = requests.get("http://127.0.0.1:15080/group/" + str(elem_group_id) + "")
+				if result_group.status_code == 200:
+					group = result_group.json()
+					debug.info("    o- " + str(group["name"]))
+					# step 1: all the video:
+					result_videos_in_group = requests.get("http://127.0.0.1:15080/group/" + str(elem_group_id) + "/video")
+					if result_videos_in_group.status_code == 200:
+						for elem_video_id in result_videos_in_group.json():
+							result_video = requests.get("http://127.0.0.1:15080/video/" + str(elem_video_id) + "")
+							if result_video.status_code == 200:
+								video = result_video.json()
+								debug.info("        - " + str(video["generated_name"]))
+							else:
+								debug.warning("        get video id: " + str(elem_video_id) + " !!!!!! " + str(result_video.status_code) + "")
+					else:
+						debug.warning("        get video in group id: " + str(elem_group_id) + " !!!!!! " + str(result_videos_in_group.status_code) + "")
+				else:
+					debug.warning("        get group id: " + str(elem_group_id) + " !!!!!! " + str(result_group.status_code) + "")
+		else:
+			debug.warning("        List group: !!!!!! " + str(result_groups.status_code) + "")
+		# get list of video without groups
+		result_video_solo = requests.get("http://127.0.0.1:15080/type/" + str(elem["id"]) + "/video_no_group")
+		if result_video_solo.status_code == 200:
+			for elem_video_id in result_video_solo.json():
+				result_video = requests.get("http://127.0.0.1:15080/video/" + str(elem_video_id) + "")
+				if result_video.status_code == 200:
+					video = result_video.json()
+					debug.info("    - " + str(video["generated_name"]))
+				else:
+					debug.warning("        get video id: " + str(elem_video_id) + " !!!!!! " + str(result_video.status_code) + "")
+		else:
+			debug.warning("        List video solo: !!!!!! " + str(result_video_solo.status_code) + "")
+	
+	
 	"""
 	uint32_t count = remoteServiceVideo.count().wait().get();
 	debug.debug("have " + count + " medias");

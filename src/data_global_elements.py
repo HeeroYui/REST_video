@@ -32,3 +32,10 @@ def check_save():
 
 check_save()
 
+
+API_TYPE = "type"
+API_GROUP = "group"
+API_SAISON = "saison"
+API_VIDEO = "video"
+API_DATA = "data"
+

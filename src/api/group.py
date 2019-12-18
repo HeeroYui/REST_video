@@ -78,6 +78,16 @@ def add(_app, _name_api):
 			return response.json(value)
 		raise ServerError("No data found", status_code=404)
 	
+	@elem_blueprint.get('/' + _name_api + '/<id:int>/video', strict_slashes=True)
+	@doc.summary("Show videos")
+	@doc.description("List all the videos availlable for this group.")
+	@doc.produces(content_type='application/json')
+	async def retrive(request, id):
+		value = data_global_elements.get_interface(data_global_elements.API_VIDEO).gets_where(select=[["==", "group_id", id]], filter=["id"])
+		if value != None:
+			return response.json(value)
+		raise ServerError("No data found", status_code=404)
+	
 	@elem_blueprint.put('/' + _name_api + '/<id:int>', strict_slashes=True)
 	@doc.summary("Update resource")
 	@doc.description("Update the specified resource in storage.")

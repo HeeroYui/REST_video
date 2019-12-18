@@ -12,6 +12,7 @@ import time
 import json
 import os
 import sys
+import copy
 import datetime
 import time, threading
 import realog.debug as debug
@@ -29,6 +30,37 @@ import tools
 import data_interface
 import data_global_elements
 
+def generate_name(_value):
+	group_name = ""
+	if "group_id" in _value.keys():
+		group_property = data_global_elements.get_interface(data_global_elements.API_GROUP).get(_value["group_id"])
+		if group_property != None:
+			group_name = group_property["name"]
+	saison_number = ""
+	if "saison_id" in _value.keys():
+		saison_property = data_global_elements.get_interface(data_global_elements.API_SAISON).get(_value["saison_id"])
+		if saison_property != None:
+			saison_number = str(saison_property["number"])
+			if len(saison_number) == 1:
+				saison_number = "0" + saison_number
+	out = ""
+	if group_name != "":
+		out += group_name + "-"
+	if saison_number != "":
+		out += "s" + saison_number + "-"
+	if "episode" in _value.keys() and _value["episode"] != None:
+		if _value["episode"] < 10:
+			out += "e00" + str(_value["episode"]) + "-" 
+		elif _value["episode"] < 100:
+			out += "e0" + str(_value["episode"]) + "-" 
+		else:
+			out += "e" + str(_value["episode"]) + "-" 
+	out += _value["name"]
+	if "time" in _value.keys() and _value["time"] != None:
+		out += "(" + _value["name"] + ")"
+	return out
+	
+
 def add(_app, _name_api):
 	elem_blueprint = Blueprint(_name_api)
 	
@@ -36,13 +68,13 @@ def add(_app, _name_api):
 		id = int
 		sha512 = str
 		type_id = int
-		saison_id = int
+		saison_id = [int, type(None)]
 		episode = [int, type(None)]
-		group_id = int
+		group_id = [int, type(None)]
 		name = str
-		description = str
+		description = [str, type(None)]
 		# creating time
-		date = str
+		create_date = str
 		# number of second
 		time = [int, type(None)]
 	
@@ -56,7 +88,7 @@ def add(_app, _name_api):
 		name = str
 		description = str
 		# creating time
-		date = str
+		create_date = str
 		# number of second
 		time = int
 	
@@ -73,14 +105,21 @@ def add(_app, _name_api):
 	@doc.consumes(DataModel, location='body')#, required=True)
 	@doc.response_success(status=201, description='If successful created')
 	async def create(request):
-		"""
-		if "group_name" in request.json.keys():
-			id_group = data_global_elements.get_interface(API_GROUP).find_or_create_name(request.json["group_name"])
-		"""
-		if "episode" not in request.json.keys():
-			request.json["episode"] = None
-		else:
-			request.json["episode"] = int(request.json["episode"])
+		for type_key in ["sha512","type_id","name"]:
+			if type_key not in request.json.keys():
+				raise ServerError("Bad Request: Missing Key '" + type_key + "'", status_code=400)
+		for type_key in ["date"]:
+			if type_key in request.json.keys():
+				raise ServerError("Forbidden: Must not be set Key '" + type_key + "'", status_code=403)
+		for type_key in ["saison_id","episode","time","group_id","description"]:
+			if type_key not in request.json.keys():
+				request.json[type_key] = None
+		request.json["create_date"] = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+		#Find if already exist
+		list_elem = data_global_elements.get_interface(_name_api).find(["group_id", "sha512"], request.json);
+		for elem in list_elem:
+			return response.json(elem)
+		
 		return response.json(data_global_elements.get_interface(_name_api).post(request.json))
 	
 	@elem_blueprint.get('/' + _name_api + '/<id:int>', strict_slashes=True)
@@ -90,7 +129,10 @@ def add(_app, _name_api):
 	async def retrive(request, id):
 		value = data_global_elements.get_interface(_name_api).get(id)
 		if value != None:
-			return response.json(value)
+			generated_name = generate_name(value)
+			tmp = copy.deepcopy(value)
+			tmp["generated_name"] = generated_name
+			return response.json(tmp)
 		raise ServerError("No data found", status_code=404)
 	
 	@elem_blueprint.put('/' + _name_api + '/<id:int>', strict_slashes=True)

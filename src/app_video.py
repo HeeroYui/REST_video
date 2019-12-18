@@ -65,33 +65,28 @@ app.blueprint(swagger_blueprint)
 def add_interface(_name):
 	data_global_elements.add_interface(_name, data_interface.DataInterface(_name, os.path.join(tools.get_run_path(), app.config['REST_DATA'], "bdd_" + _name + ".json")))
 
-API_TYPE = "type"
-add_interface(API_TYPE)
-API_GROUP = "group"
-add_interface(API_GROUP)
-API_SAISON = "saison"
-add_interface(API_SAISON)
-API_VIDEO = "video"
-add_interface(API_VIDEO)
-API_DATA = "data"
+add_interface(data_global_elements.API_TYPE)
+add_interface(data_global_elements.API_GROUP)
+add_interface(data_global_elements.API_SAISON)
+add_interface(data_global_elements.API_VIDEO)
 
 import api.root as api_root
 api_root.add(app)
 
 import api.type as api_type
-api_type.add(app, API_TYPE)
+api_type.add(app, data_global_elements.API_TYPE)
 
 import api.group as api_group
-api_group.add(app, API_GROUP)
+api_group.add(app, data_global_elements.API_GROUP)
 
 import api.saison as api_saison
-api_saison.add(app, API_SAISON)
+api_saison.add(app, data_global_elements.API_SAISON)
 
 import api.video as api_video
-api_video.add(app, API_VIDEO)
+api_video.add(app, data_global_elements.API_VIDEO)
 
 import api.data as api_data
-api_data.add(app, API_DATA)
+api_data.add(app, data_global_elements.API_DATA)
 
 
 

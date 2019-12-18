@@ -82,6 +82,8 @@ def add(_app, _name_api):
 				answer_data = {
 					"size": total_size,
 					"sha512": str(sha1.hexdigest()),
+					'filename': _request.headers["filename"],
+					'mime-type': _request.headers["mime-type"],
 					"already_exist": True,
 				}
 				
@@ -98,6 +100,8 @@ def add(_app, _name_api):
 			answer_data = {
 				"size": total_size,
 				"sha512": str(sha1.hexdigest()),
+				'filename': _request.headers["filename"],
+				'mime-type': _request.headers["mime-type"],
 				"already_exist": True,
 			}
 			await _response.write(json.dumps(answer_data, sort_keys=True, indent=4))
