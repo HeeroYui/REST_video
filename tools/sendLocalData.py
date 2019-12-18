@@ -55,10 +55,10 @@ def extract_and_remove(_input_value, _start_mark, _stop_mark):
 		elif     inside == True \
 		     and it == _stop_mark:
 			inside = False
-			_values.append(inside_data)
+			values.append(inside_data)
 			inside_data = ""
 		elif inside == True:
-			insideData += it
+			inside_data += it
 		else:
 			out += it
 	return (out, values)
