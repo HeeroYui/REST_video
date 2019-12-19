@@ -11,7 +11,7 @@
 import tools
 import json
 from realog import debug
-
+import random 
 from sanic.exceptions import ServerError
 ##
 ## @breif Generic interface to access to the BDD (no BDD, direct file IO)
@@ -26,6 +26,7 @@ class DataInterface():
 		self.last_id = 0
 		if tools.exist(self.file) == False:
 			self.mark_to_store()
+			self.last_id = random.randint(20, 100)
 		else:
 			data = tools.file_read_data(self.file)
 			self.bdd = json.loads(data)

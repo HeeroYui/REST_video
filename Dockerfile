@@ -12,6 +12,8 @@ RUN pip install realog
 
 RUN pip install python-magic
 
+RUN pip install pymediainfo
+
 EXPOSE 80
 
 ADD src /application/

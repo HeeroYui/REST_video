@@ -16,11 +16,16 @@ import datetime
 import time, threading
 import realog.debug as debug
 
+from aiofiles import os as async_os
+
+from pymediainfo import MediaInfo
+
 from sanic import Sanic
 from sanic import response
 from sanic import views
 from sanic import Blueprint
 from sanic.exceptions import ServerError
+from sanic.response import file_stream
 
 from sanic_simple_swagger import swagger_blueprint, openapi_blueprint
 from sanic_simple_swagger import doc
@@ -86,15 +91,19 @@ def add(_app, _name_api):
 					'mime-type': _request.headers["mime-type"],
 					"already_exist": True,
 				}
-				
 				await _response.write(json.dumps(answer_data, sort_keys=True, indent=4))
 				return
+			# move the file
 			shutil.move(temporary_file, destination_filename)
+			
+			# collect media info ...
+			media_info = MediaInfo.parse(destination_filename)
 			data_metafile = {
 				"sha512": str(sha1.hexdigest()),
 				"size": total_size,
 				'filename': _request.headers["filename"],
 				'mime-type': _request.headers["mime-type"],
+				'media-info': json.loads(media_info.to_json())
 			}
 			tools.file_write_data(destination_filename + ".meta", json.dumps(data_metafile, sort_keys=True, indent=4))
 			answer_data = {
@@ -107,17 +116,22 @@ def add(_app, _name_api):
 			await _response.write(json.dumps(answer_data, sort_keys=True, indent=4))
 		return response.stream(streaming, content_type='application/json')
 	
-	"""
-	@elem_blueprint.get('/' + _name_api + '/<id:int>', strict_slashes=True)
+	@elem_blueprint.get('/' + _name_api + '/<id:string>', strict_slashes=True)
 	@doc.summary("Show resources")
 	@doc.description("Display a listing of the resource.")
 	@doc.produces(content_type='application/json')
 	async def retrive(request, id):
-		value = data_global_elements.get_interface(_name_api).get(id)
-		if value != None:
-			return response.json(value)
+		filename = os.path.join(_app.config['REST_MEDIA_DATA'], id)
+		if os.path.isfile(filename) == True:
+			file_stat = await async_os.stat(filename)
+			headers = {"Content-Length": str(file_stat.st_size)}
+			return await file_stream(
+				filename,
+				headers=headers,
+				chunked=False,
+			)
 		raise ServerError("No data found", status_code=404)
-	"""
-	
 	
 	_app.blueprint(elem_blueprint)
+
+
