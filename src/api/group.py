@@ -79,11 +79,31 @@ def add(_app, _name_api):
 		raise ServerError("No data found", status_code=404)
 	
 	@elem_blueprint.get('/' + _name_api + '/<id:int>/video', strict_slashes=True)
-	@doc.summary("Show videos")
+	@doc.summary("get videos list")
 	@doc.description("List all the videos availlable for this group.")
 	@doc.produces(content_type='application/json')
-	async def retrive(request, id):
+	async def retrive_video(request, id):
 		value = data_global_elements.get_interface(data_global_elements.API_VIDEO).gets_where(select=[["==", "group_id", id]], filter=["id"])
+		if value != None:
+			return response.json(value)
+		raise ServerError("No data found", status_code=404)
+	
+	@elem_blueprint.get('/' + _name_api + '/<id:int>/video_no_saison', strict_slashes=True)
+	@doc.summary("get videos list who have no saison")
+	@doc.description("List all the videos availlable for this group tht does not depend on saison.")
+	@doc.produces(content_type='application/json')
+	async def retrive_video_no_saison(request, id):
+		value = data_global_elements.get_interface(data_global_elements.API_VIDEO).gets_where(select=[["==", "group_id", id], ["==", "saison_id", None]], filter=["id"])
+		if value != None:
+			return response.json(value)
+		raise ServerError("No data found", status_code=404)
+	
+	@elem_blueprint.get('/' + _name_api + '/<id:int>/saison', strict_slashes=True)
+	@doc.summary("get videos list who have no saison")
+	@doc.description("List all the videos availlable for this group tht does not depend on saison.")
+	@doc.produces(content_type='application/json')
+	async def retrive_saison(request, id):
+		value = data_global_elements.get_interface(data_global_elements.API_SAISON).gets_where(select=[["==", "group_id", id]], filter=["id"])
 		if value != None:
 			return response.json(value)
 		raise ServerError("No data found", status_code=404)

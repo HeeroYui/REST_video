@@ -304,6 +304,7 @@ def push_video_file(_path, _basic_key={}):
 		if     len(list_element) > 3 \
 		   and list_element[1][0] == 's' \
 		   and list_element[2][0] == 'e':
+			debug.warning("Parse format: xxx-sXX-eXX-kjhlkjlkj(1234).*")
 			# internal formalisme ...
 			saison = -1;
 			episode = -1;
@@ -317,6 +318,7 @@ def push_video_file(_path, _basic_key={}):
 			_basic_key["title"] = full_episode_name
 			if list_element[1][1:] == "XX":
 				# saison unknow ... ==> nothing to do ...
+				#saison = 123456789;
 				pass
 			else:
 				saison = int(list_element[1][1:]);
@@ -335,13 +337,46 @@ def push_video_file(_path, _basic_key={}):
 			if saison < 0:
 				# nothing to do
 				pass
-			elif saison < 10:
-				saisonPrint = "0" + str(saison)
-				_basic_key["saison"] = str(saison)
 			else:
 				saisonPrint = str(saison)
-				_basic_key["saison"] = str(saison)
+				_basic_key["saison"] = saison
 			
+			if episode < 0:
+				# nothing to do
+				pass
+			elif episode < 10:
+				episodePrint = "0" + str(episode);
+				_basic_key["episode"] = episode
+			else:
+				episodePrint = str(episode);
+				_basic_key["episode"] = episode
+			
+			debug.info("     ==> '" + series_name + "-s" + saisonPrint + "-e" + episodePrint + "-" + full_episode_name + "'");
+		elif     len(list_element) > 2 \
+		     and list_element[1][0] == 'e':
+			debug.warning("Parse format: xxx-eXX-kjhlkjlkj(1234).*")
+			# internal formalisme ...
+			saison = -1;
+			episode = -1;
+			series_name = list_element[0];
+			
+			_basic_key["series-name"] = series_name
+			full_episode_name = list_element[2]
+			for yyy in range(3, len(list_element)):
+				full_episode_name += "-" + list_element[yyy]
+			
+			_basic_key["title"] = full_episode_name
+			if list_element[1][1:] == "XX":
+				# episode unknow ... ==> nothing to do ...
+				pass
+			else:
+				episode = int(list_element[1][1:]);
+				_basic_key["episode"] = int(episode)
+			
+			debug.info("Find a internal mode series: :");
+			debug.info("    origin       : '" + file_name + "'");
+			saisonPrint = "XX";
+			episodePrint = "XX";
 			if episode < 0:
 				# nothing to do
 				pass
@@ -377,10 +412,10 @@ def push_video_file(_path, _basic_key={}):
 		group_id = result_group_data.json()["id"]
 		data_model["group_id"] = group_id
 		if "saison" in _basic_key.keys():
-			result_saison_data = requests.post("http://127.0.0.1:15080/saison/find", data=json.dumps({"number":int(_basic_key["saison"]), "group_id":group_id}, sort_keys=True, indent=4))
+			result_saison_data = requests.post("http://127.0.0.1:15080/saison/find", data=json.dumps({"number":_basic_key["saison"], "group_id":group_id}, sort_keys=True, indent=4))
 			debug.info("Create saison ??? *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
 			if result_saison_data.status_code == 404:
-				result_saison_data = requests.post("http://127.0.0.1:15080/saison", data=json.dumps({"number":int(_basic_key["saison"]), "group_id":group_id}, sort_keys=True, indent=4))
+				result_saison_data = requests.post("http://127.0.0.1:15080/saison", data=json.dumps({"number":_basic_key["saison"], "group_id":group_id}, sort_keys=True, indent=4))
 				debug.info("yes we create new saison *********** : " + str(result_saison_data) + "  " + result_saison_data.text)
 			saison_id = result_saison_data.json()["id"]
 			data_model["saison_id"] = saison_id
@@ -587,6 +622,19 @@ debug.info("==================================");
 debug.info("== ZEUS test client start        ==");
 debug.info("==================================");
 
+
+def show_video(elem_video_id, indent):
+	indent_data = ""
+	while indent > 0:
+		indent_data += "\t"
+		indent -= 1
+	result_video = requests.get("http://127.0.0.1:15080/video/" + str(elem_video_id) + "")
+	if result_video.status_code == 200:
+		video = result_video.json()
+		debug.info(indent_data + "- " + str(video["generated_name"]))
+	else:
+		debug.warning(indent_data + "get video id: " + str(elem_video_id) + " !!!!!! " + str(result_video.status_code) + "")
+
 # ****************************************************************************************
 # **   Clear All the data base ...
 # ****************************************************************************************
@@ -667,35 +715,43 @@ elif requestAction == "tree":
 				result_group = requests.get("http://127.0.0.1:15080/group/" + str(elem_group_id) + "")
 				if result_group.status_code == 200:
 					group = result_group.json()
-					debug.info("    o- " + str(group["name"]))
-					# step 1: all the video:
-					result_videos_in_group = requests.get("http://127.0.0.1:15080/group/" + str(elem_group_id) + "/video")
+					debug.info("\to- " + str(group["name"]))
+					# step 1: all the saison:
+					result_saison_in_group = requests.get("http://127.0.0.1:15080/group/" + str(elem_group_id) + "/saison")
+					if result_saison_in_group.status_code == 200:
+						for elem_saison_id in result_saison_in_group.json():
+							result_saison = requests.get("http://127.0.0.1:15080/saison/" + str(elem_saison_id) + "")
+							if result_saison.status_code == 200:
+								debug.info("\t\t* saison " + str(result_saison.json()["number"]))
+								result_videos_in_saison = requests.get("http://127.0.0.1:15080/saison/" + str(result_saison.json()["id"]) + "/video")
+								if result_videos_in_saison.status_code == 200:
+									for elem_video_id in result_videos_in_saison.json():
+										show_video(elem_video_id, 3)
+								else:
+									debug.warning("\t\tget video in saison id: " + str(elem_saison_id) + " !!!!!! " + str(result_videos_in_saison.status_code) + "")
+									show_video(elem_video_id, 2)
+							else:
+								debug.warning("\t\tget saison id: " + str(elem_saison_id) + " !!!!!! " + str(result_saison.status_code) + "")
+					else:
+						debug.warning("\t\tget saison in group id: " + str(elem_group_id) + " !!!!!! " + str(result_saison_in_group.status_code) + "")
+					# step 2: all the video with no saison:
+					result_videos_in_group = requests.get("http://127.0.0.1:15080/group/" + str(elem_group_id) + "/video_no_saison")
 					if result_videos_in_group.status_code == 200:
 						for elem_video_id in result_videos_in_group.json():
-							result_video = requests.get("http://127.0.0.1:15080/video/" + str(elem_video_id) + "")
-							if result_video.status_code == 200:
-								video = result_video.json()
-								debug.info("        - " + str(video["generated_name"]))
-							else:
-								debug.warning("        get video id: " + str(elem_video_id) + " !!!!!! " + str(result_video.status_code) + "")
+							show_video(elem_video_id, 2)
 					else:
-						debug.warning("        get video in group id: " + str(elem_group_id) + " !!!!!! " + str(result_videos_in_group.status_code) + "")
+						debug.warning("\t\tget video in group id: " + str(elem_group_id) + " !!!!!! " + str(result_videos_in_group.status_code) + "")
 				else:
-					debug.warning("        get group id: " + str(elem_group_id) + " !!!!!! " + str(result_group.status_code) + "")
+					debug.warning("\tget group id: " + str(elem_group_id) + " !!!!!! " + str(result_group.status_code) + "")
 		else:
-			debug.warning("        List group: !!!!!! " + str(result_groups.status_code) + "")
+			debug.warning("\t\tList group: !!!!!! " + str(result_groups.status_code) + "")
 		# get list of video without groups
 		result_video_solo = requests.get("http://127.0.0.1:15080/type/" + str(elem["id"]) + "/video_no_group")
 		if result_video_solo.status_code == 200:
 			for elem_video_id in result_video_solo.json():
-				result_video = requests.get("http://127.0.0.1:15080/video/" + str(elem_video_id) + "")
-				if result_video.status_code == 200:
-					video = result_video.json()
-					debug.info("    - " + str(video["generated_name"]))
-				else:
-					debug.warning("        get video id: " + str(elem_video_id) + " !!!!!! " + str(result_video.status_code) + "")
+				show_video(elem_video_id, 1)
 		else:
-			debug.warning("        List video solo: !!!!!! " + str(result_video_solo.status_code) + "")
+			debug.warning("\t\tList video solo: !!!!!! " + str(result_video_solo.status_code) + "")
 	
 	
 	"""
@@ -752,4 +808,3 @@ else:
 	debug.info("============================================");
 	debug.error("== Unknow action: '" + requestAction + "'");
 	debug.info("============================================");
-

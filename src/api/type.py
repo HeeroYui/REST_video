@@ -99,7 +99,7 @@ def add(_app, _name_api):
 	@doc.summary("List the whole video ids")
 	@doc.description("List all video availlable with this type (list of ids).")
 	@doc.produces(content_type='application/json')
-	async def count_values(request, id):
+	async def retrive_video(request, id):
 		list_values = data_global_elements.get_interface(data_global_elements.API_VIDEO).gets_where(select=[["==", "type_id", id]], filter=["id"])
 		return response.json(list_values)
 	
@@ -107,7 +107,7 @@ def add(_app, _name_api):
 	@doc.summary("List the whole video ids")
 	@doc.description("List all video availlable with this type (list of ids).")
 	@doc.produces(content_type='application/json')
-	async def count_values(request, id):
+	async def retrive_video_no_group(request, id):
 		list_values = data_global_elements.get_interface(data_global_elements.API_VIDEO).gets_where(select=[["==", "type_id", id], ["==", "group_id", None]], filter=["id"])
 		return response.json(list_values)
 	
@@ -115,7 +115,7 @@ def add(_app, _name_api):
 	@doc.summary("List the whole video ids")
 	@doc.description("List all video availlable with this type (list of ids).")
 	@doc.produces(content_type='application/json')
-	async def count_values(request, id):
+	async def retrive_group(request, id):
 		list_values = data_global_elements.get_interface(data_global_elements.API_VIDEO).gets_where(select=[["==", "type_id", id], ["!=", "group_id", None]], filter=["group_id"])
 		return response.json(list_values)
 	
